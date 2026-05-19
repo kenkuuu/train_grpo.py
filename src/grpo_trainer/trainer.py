@@ -7,7 +7,7 @@ from typing import Optional, Callable
 from datetime import datetime
 
 import torch
-from transformers import PreTrainedModel, PreTrainedTokenizer
+from transformers import PreTrainedModel, PreTrainedTokenizer, TrainerCallback, TrainerControl, TrainerState, TrainingArguments
 from trl import GRPOConfig, GRPOTrainer
 from peft import LoraConfig
 
@@ -17,6 +17,15 @@ from grpo_trainer.datasets import load_dataset_for_training, load_eval_dataset
 from grpo_trainer.rewards import RewardManager
 
 logger = logging.getLogger(__name__)
+
+
+class SaveAtStep1Callback(TrainerCallback):
+    """Force checkpoint save at step 1 to capture initial learning state."""
+
+    def on_step_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
+        if state.global_step == 1:
+            control.should_save = True
+        return control
 
 
 class GRPOTrainerWrapper:
@@ -101,14 +110,15 @@ class GRPOTrainerWrapper:
             "reward_funcs": reward_funcs,
             "args": training_args,
             "train_dataset": train_dataset,
+            "callbacks": [SaveAtStep1Callback()],
         }
-        
+
         if eval_dataset:
             trainer_kwargs["eval_dataset"] = eval_dataset
-        
+
         if self.peft_config and self.config.lora.enabled:
             trainer_kwargs["peft_config"] = self.peft_config
-        
+
         self.trainer = GRPOTrainer(**trainer_kwargs)
         
         logger.info("Setup complete!")
@@ -139,6 +149,7 @@ class GRPOTrainerWrapper:
             "log_completions": tc.log_completions,
             "save_steps": tc.save_steps,
             "save_total_limit": tc.save_total_limit,
+            "save_only_model": tc.save_only_model,
             "bf16": tc.bf16,
             "fp16": tc.fp16,
             "report_to": tc.report_to,

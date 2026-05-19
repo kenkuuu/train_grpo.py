@@ -138,7 +138,8 @@ class TrainingConfig:
     logging_steps: int = 1
     log_completions: bool = False  # Log generated completions
     save_steps: int = 100
-    save_total_limit: int = 3
+    save_total_limit: Optional[int] = 3
+    save_only_model: bool = False
     eval_steps: int = 100
     eval_strategy: str = "steps"
     
