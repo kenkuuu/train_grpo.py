@@ -41,6 +41,9 @@ COPY src/ ./src/
 COPY configs/ ./configs/
 COPY scripts/ ./scripts/
 
+# Install PyTorch for CUDA 12.0 (must match host driver)
+RUN pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu120
+
 # Install the package (exclude flash-attn; installed separately below)
 RUN pip install -e ".[dev,deepspeed]"
 

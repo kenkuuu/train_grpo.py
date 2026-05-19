@@ -5,6 +5,7 @@ services:
       dockerfile: Dockerfile
     image: kubota/grpo-trainer
     container_name: grpo-trainer
+    shm_size: '16gb'
     deploy:
       resources:
         reservations:
@@ -29,6 +30,7 @@ services:
       context: .
       dockerfile: Dockerfile
     image: kubota/grpo-trainer
+    shm_size: '16gb'
     deploy:
       resources:
         reservations:
@@ -51,6 +53,7 @@ services:
       context: .
       dockerfile: Dockerfile
     image: kubota/grpo-trainer
+    shm_size: '16gb'
     deploy:
       resources:
         reservations:
