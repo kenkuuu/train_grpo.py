@@ -1,0 +1,58 @@
+model:
+  name: "Qwen/Qwen2.5-0.5B-Instruct"
+  torch_dtype: "bfloat16"
+  attn_implementation: "eager"
+  device_map: null  # DDP uses per-process GPU assignment; "auto" conflicts with torchrun
+  trust_remote_code: true
+  use_cache: false
+
+lora:
+  enabled: false
+
+data:
+  name: "gsm8k"
+  subset: "main"
+  split: "train"
+  eval_split: "test"
+  use_one_shot: true
+  use_few_shot: false
+  shuffle: true
+  seed: 42
+
+reward:
+  correctness_weight: 2.0
+  format_weight: 0.5
+  integer_weight: 0.5
+  xml_count_weight: 0.5
+  reasoning_quality_weight: 0.3
+  strict_format: false
+
+training:
+  output_dir: "outputs/grpo-gsm8k-0.5b-full"
+  run_name: "grpo-gsm8k-qwen0.5b-full"
+
+  learning_rate: 1.0e-5
+  adam_beta1: 0.9
+  adam_beta2: 0.99
+  weight_decay: 0.1
+  warmup_ratio: 0.1
+  lr_scheduler_type: "cosine"
+  max_grad_norm: 0.1
+
+  per_device_train_batch_size: 8   # 4 GPUs × 8 = 32 prompts/step
+  per_device_eval_batch_size: 16
+  gradient_accumulation_steps: 1
+
+  num_generations: 8
+  max_prompt_length: 256
+  max_completion_length: 786
+
+  num_train_epochs: 1
+  logging_steps: 1
+  save_steps: 200
+  save_total_limit: 2
+  eval_steps: 200
+
+  bf16: true
+  report_to: "wandb"
+  seed: 42
