@@ -169,6 +169,13 @@ def train(
     if seed:
         config.training.seed = seed
 
+    # Append seed to output_dir / run_name if not explicitly provided,
+    # so each seed run is saved to a distinct directory.
+    if not output_dir:
+        config.training.output_dir = f"{config.training.output_dir}_s{config.training.seed}"
+    if not run_name:
+        config.training.run_name = f"{config.training.run_name}_s{config.training.seed}"
+
     # Set up logging
     log_level = logging.DEBUG if verbose else logging.INFO
     logging.basicConfig(level=log_level)
