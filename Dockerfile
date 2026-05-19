@@ -41,10 +41,10 @@ COPY src/ ./src/
 COPY configs/ ./configs/
 COPY scripts/ ./scripts/
 
-# Install the package
-RUN pip install -e ".[all]"
+# Install the package (exclude flash-attn; installed separately below)
+RUN pip install -e ".[dev,deepspeed]"
 
-# Install flash-attn separately (requires special handling)
+# Install flash-attn separately (requires --no-build-isolation for CUDA compilation)
 RUN pip install flash-attn --no-build-isolation || echo "Flash attention installation skipped"
 
 # Create directories for outputs and data
