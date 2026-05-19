@@ -17,6 +17,7 @@ services:
       - ./configs:/app/configs
       - ./data:/app/data
       - ~/.cache/huggingface:/root/.cache/huggingface
+      - ./src:/app/src
     env_file:
       - .env
     stdin_open: true
@@ -40,6 +41,7 @@ services:
       - ./configs:/app/configs
       - ./data:/app/data
       - ~/.cache/huggingface:/root/.cache/huggingface
+      - ./src:/app/src
     env_file:
       - .env
     command: [ "grpo-train", "-c", "/app/configs/default.yaml" ]
@@ -61,6 +63,7 @@ services:
       - ./configs:/app/configs
       - ./data:/app/data
       - ~/.cache/huggingface:/root/.cache/huggingface
+      - ./src:/app/src
     env_file:
       - .env
     command: [ "grpo-eval", "/app/outputs/grpo-default", "-d", "gsm8k", "-s", "test" ]
