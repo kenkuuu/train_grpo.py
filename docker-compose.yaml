@@ -5,8 +5,6 @@ services:
       dockerfile: Dockerfile
     image: kubota/grpo-trainer
     container_name: grpo-trainer
-
-    # GPU support
     deploy:
       resources:
         reservations:
@@ -14,35 +12,55 @@ services:
             - driver: nvidia
               count: all
               capabilities: [ gpu ]
-
-    # Mount volumes
     volumes:
       - ./outputs:/app/outputs
       - ./configs:/app/configs
       - ./data:/app/data
-      - ~/.cache/huggingface:/root/.cache/huggingface # Cache HF models
-
-    # Environment variables
-    environment:
-      - WANDB_API_KEY=${WANDB_API_KEY:-}
-      - HF_TOKEN=${HF_TOKEN:-}
-      - CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0}
-
-    # Keep container running
+      - ~/.cache/huggingface:/root/.cache/huggingface
+    env_file:
+      - .env
     stdin_open: true
     tty: true
-
-    # Default command (override with docker-compose run)
     command: [ "bash" ]
 
-  # Training service
   train:
-    extends:
-      service: grpo-trainer
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: kubota/grpo-trainer
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [ gpu ]
+    volumes:
+      - ./outputs:/app/outputs
+      - ./configs:/app/configs
+      - ./data:/app/data
+      - ~/.cache/huggingface:/root/.cache/huggingface
+    env_file:
+      - .env
     command: [ "grpo-train", "-c", "/app/configs/default.yaml" ]
 
-  # Evaluation service
   evaluate:
-    extends:
-      service: grpo-trainer
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: kubota/grpo-trainer
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [ gpu ]
+    volumes:
+      - ./outputs:/app/outputs
+      - ./configs:/app/configs
+      - ./data:/app/data
+      - ~/.cache/huggingface:/root/.cache/huggingface
+    env_file:
+      - .env
     command: [ "grpo-eval", "/app/outputs/grpo-default", "-d", "gsm8k", "-s", "test" ]
