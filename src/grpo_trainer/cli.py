@@ -180,14 +180,17 @@ def train(
     log_level = logging.DEBUG if verbose else logging.INFO
     logging.basicConfig(level=log_level)
 
-    # rank 0 only: display and confirm
+    in_distributed = "LOCAL_RANK" in os.environ
+
+    # rank 0 only: display and confirm (skipped in distributed mode)
     if is_main:
         show_banner()
         console.print(f"[cyan]Loading config from:[/cyan] {config_path}")
         show_config_summary(config)
-        if not typer.confirm("\nStart training with this configuration?", default=True):
-            console.print("[yellow]Training cancelled.[/yellow]")
-            raise typer.Exit()
+        if not in_distributed:
+            if not typer.confirm("\nStart training with this configuration?", default=True):
+                console.print("[yellow]Training cancelled.[/yellow]")
+                raise typer.Exit()
         console.print("\n[bold green]Starting training...[/bold green]\n")
 
     try:

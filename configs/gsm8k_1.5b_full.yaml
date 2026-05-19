@@ -39,9 +39,9 @@ training:
   lr_scheduler_type: "cosine"
   max_grad_norm: 0.1
 
-  per_device_train_batch_size: 8   # 4 GPUs x 8 = 32 prompts/step → 234 steps/epoch
-  per_device_eval_batch_size: 16
-  gradient_accumulation_steps: 1
+  per_device_train_batch_size: 8
+  per_device_eval_batch_size: 8
+  gradient_accumulation_steps: 4   # 8 x 4 = 32 prompts/optimizer step → 234 steps/epoch
 
   num_generations: 8
   max_completion_length: 786
