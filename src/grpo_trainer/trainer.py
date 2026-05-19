@@ -133,7 +133,6 @@ class GRPOTrainerWrapper:
             "per_device_eval_batch_size": tc.per_device_eval_batch_size,
             "gradient_accumulation_steps": tc.gradient_accumulation_steps,
             "num_generations": tc.num_generations,
-            "max_prompt_length": tc.max_prompt_length,
             "max_completion_length": tc.max_completion_length,
             "num_train_epochs": tc.num_train_epochs,
             "logging_steps": tc.logging_steps,
