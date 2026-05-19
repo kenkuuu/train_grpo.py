@@ -1,6 +1,7 @@
 """Command-line interface for GRPO Trainer."""
 
 import logging
+import os
 from pathlib import Path
 from typing import Optional
 
@@ -132,16 +133,14 @@ def train(
     ),
 ):
     """Train a model using GRPO."""
-    show_banner()
-    
-    # Load or create config
+    is_main = int(os.environ.get("LOCAL_RANK", 0)) == 0
+
+    # Load or create config (all ranks need the config)
     if config_path and config_path.exists():
-        console.print(f"[cyan]Loading config from:[/cyan] {config_path}")
         config = Config.from_yaml(config_path)
     else:
-        console.print("[yellow]Using default configuration[/yellow]")
         config = Config()
-    
+
     # Override with CLI arguments
     if model_name:
         config.model.name = model_name
@@ -169,28 +168,29 @@ def train(
         config.training.report_to = report_to
     if seed:
         config.training.seed = seed
-    
+
     # Set up logging
     log_level = logging.DEBUG if verbose else logging.INFO
     logging.basicConfig(level=log_level)
-    
-    # Show config summary
-    show_config_summary(config)
-    
-    # Confirm before starting
-    if not typer.confirm("\nStart training with this configuration?", default=True):
-        console.print("[yellow]Training cancelled.[/yellow]")
-        raise typer.Exit()
-    
-    # Run training
-    console.print("\n[bold green]Starting training...[/bold green]\n")
-    
+
+    # rank 0 only: display and confirm
+    if is_main:
+        show_banner()
+        console.print(f"[cyan]Loading config from:[/cyan] {config_path}")
+        show_config_summary(config)
+        if not typer.confirm("\nStart training with this configuration?", default=True):
+            console.print("[yellow]Training cancelled.[/yellow]")
+            raise typer.Exit()
+        console.print("\n[bold green]Starting training...[/bold green]\n")
+
     try:
         trainer = train_grpo(config)
-        console.print("\n[bold green]✓ Training completed successfully![/bold green]")
-        console.print(f"[cyan]Model saved to:[/cyan] {config.training.output_dir}")
+        if is_main:
+            console.print("\n[bold green]✓ Training completed successfully![/bold green]")
+            console.print(f"[cyan]Model saved to:[/cyan] {config.training.output_dir}")
     except Exception as e:
-        console.print(f"\n[bold red]✗ Training failed:[/bold red] {e}")
+        if is_main:
+            console.print(f"\n[bold red]✗ Training failed:[/bold red] {e}")
         raise typer.Exit(1)
 
 

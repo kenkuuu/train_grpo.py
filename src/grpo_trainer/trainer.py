@@ -48,20 +48,21 @@ class GRPOTrainerWrapper:
     
     def _setup_logging(self):
         """Configure logging for training."""
-        log_level = logging.INFO
+        import os
+        is_main = int(os.environ.get("LOCAL_RANK", 0)) == 0
+
         logging.basicConfig(
-            level=log_level,
+            level=logging.INFO,
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            handlers=[
-                logging.StreamHandler(),
-            ]
+            handlers=[logging.StreamHandler()],
         )
-        
-        # Create output directory
+
+        if not is_main:
+            return
+
         output_dir = Path(self.config.training.output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Add file handler
+
         log_file = output_dir / f"training_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
         file_handler = logging.FileHandler(log_file)
         file_handler.setFormatter(logging.Formatter(
