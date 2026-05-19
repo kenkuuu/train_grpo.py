@@ -1,7 +1,7 @@
 # GRPO Trainer Docker Image
 # =========================
 
-FROM nvidia/cuda:12.1.1-cudnn8-devel-ubuntu22.04
+FROM nvidia/cuda:12.0.1-cudnn8-devel-ubuntu22.04
 
 LABEL maintainer="kossisoroyce"
 LABEL description="GRPO Trainer - Advanced GRPO Training Framework for LLM Fine-tuning"
@@ -19,15 +19,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     vim \
     build-essential \
-    python3.11 \
-    python3.11-dev \
-    python3.11-venv \
+    python3.10 \
+    python3.10-dev \
+    python3.10-venv \
     python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
-# Set Python 3.11 as default
-RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1 \
-    && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
+# Set Python 3.10 as default
+RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.10 1 \
+    && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1
 
 # Upgrade pip
 RUN python -m pip install --upgrade pip setuptools wheel
