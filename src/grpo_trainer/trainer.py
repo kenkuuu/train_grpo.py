@@ -199,12 +199,16 @@ class GRPOTrainerWrapper:
             "save_steps": tc.save_steps,
             "save_total_limit": tc.save_total_limit,
             "save_only_model": tc.save_only_model,
+            "eval_strategy": tc.eval_strategy,
             "bf16": tc.bf16,
             "fp16": tc.fp16,
             "report_to": tc.report_to,
             "log_on_each_node": tc.log_on_each_node,
             "seed": tc.seed,
         }
+
+        if tc.eval_strategy == "steps":
+            args_dict["eval_steps"] = tc.eval_steps
 
         # GSPO / Advanced GRPO options
         if tc.loss_type != "grpo":

@@ -65,7 +65,7 @@ training:
   save_total_limit: null
   save_only_model: true
 
-  eval_steps: 234
+  eval_strategy: "epoch"
 
   bf16: true
   report_to: "wandb"

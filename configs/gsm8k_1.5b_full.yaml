@@ -57,7 +57,7 @@ training:
   save_only_model: true
   log_save_points: 10
 
-  eval_steps: 234  # eval only at epoch end
+  eval_strategy: "epoch"
 
   bf16: true
   report_to: "wandb"
