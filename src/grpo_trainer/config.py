@@ -153,9 +153,10 @@ class TrainingConfig:
     # Logging & saving
     logging_steps: int = 1
     log_completions: bool = False  # Log generated completions
-    save_steps: int = 100
+    save_steps: int = 100          # Set large (e.g. 9999) to rely solely on log-spaced saves
     save_total_limit: Optional[int] = 3
     save_only_model: bool = False
+    log_save_points: int = 10      # Number of log-spaced checkpoint saves per run
     eval_steps: int = 100
     eval_strategy: str = "steps"
     
