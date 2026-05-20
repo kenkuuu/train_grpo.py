@@ -166,7 +166,7 @@ def train(
         config.training.resume_from_checkpoint = resume
     if report_to:
         config.training.report_to = report_to
-    if seed:
+    if seed is not None:
         config.training.seed = seed
 
     # Append seed to output_dir / run_name if not explicitly provided,
