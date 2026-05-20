@@ -186,6 +186,39 @@ class ModelEvaluator:
         )
 
 
+@torch.no_grad()
+def evaluate_batch(
+    model,
+    tokenizer,
+    questions: list,
+    answers: list,
+    max_new_tokens: int = 512,
+) -> float:
+    """greedy decode で正解率を返す。既存のモデルオブジェクトを受け取る。"""
+    correct = 0
+    for question, answer in zip(questions, answers):
+        messages = [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": question},
+        ]
+        prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+        inputs = tokenizer(prompt, return_tensors="pt", truncation=True, max_length=512).to(
+            next(model.parameters()).device
+        )
+        outputs = model.generate(
+            **inputs,
+            max_new_tokens=max_new_tokens,
+            do_sample=False,
+            pad_token_id=tokenizer.pad_token_id,
+        )
+        response = tokenizer.decode(
+            outputs[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True
+        )
+        extracted = extract_xml_answer(response)
+        correct += 1 if (extracted and extracted == answer) else 0
+    return correct / len(questions) if questions else 0.0
+
+
 def run_evaluation(
     model_path: str,
     dataset_name: str = "gsm8k",

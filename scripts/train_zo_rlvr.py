@@ -28,17 +28,22 @@ from datasets import load_dataset
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 from grpo_trainer.rewards import extract_xml_answer, extract_hash_answer
+from grpo_trainer.evaluate import evaluate_batch
 
 logger = logging.getLogger(__name__)
 
 # ──────────────────────────────────────────────
 # ZO 摂動ユーティリティ（MeZO スタイル seed-based）
 # メモリ効率のため u ベクトルを保持せず seed で再生成
+#
+# LoRA モード時は PEFT が base weight を freeze（requires_grad=False）し、
+# LoRA パラメータのみ requires_grad=True にする。
+# そのため _zo_iter の requires_grad フィルタが自動的に LoRA 空間のみを摂動する。
 # ──────────────────────────────────────────────
 
 
 def _zo_iter(model, seed):
-    """seed から u = N(0,I) を生成しパラメータとともに yield する。"""
+    """requires_grad=True のパラメータに対して u = N(0,I) を生成して yield する。"""
     rng = torch.Generator(device="cpu")
     rng.manual_seed(seed)
     for p in model.parameters():
@@ -54,7 +59,7 @@ def zo_perturb(model, epsilon: float, seed: int, sign: float = 1.0):
 
 
 def zo_restore(model, epsilon: float, seed: int, sign: float = 1.0):
-    """zo_perturb の逆操作: θ ← θ - sign * ε * u(seed)"""
+    """zo_perturb の逆操作"""
     zo_perturb(model, epsilon, seed, sign=-sign)
 
 
@@ -265,10 +270,11 @@ def train_zo_rlvr(model, tokenizer, train_data, eval_data, args, device):
 
     metrics_log = []
 
+    zo_mode = f"LoRA(rank={args.lora_rank})" if args.lora_rank > 0 else "full"
     print(f"\n=== ZO-RLVR Training ===")
     print(
         f"ε={args.epsilon}  lr={args.lr}  batch={args.batch_size}  "
-        f"N={args.num_generations}  steps={args.max_steps}"
+        f"N={args.num_generations}  steps={args.max_steps}  zo={zo_mode}"
     )
     print(
         f"{'step':>5}  {'r+':>7}  {'r-':>7}  {'grad_scale':>12}  " f"{'train_r':>8}  {'eval_r':>8}"
@@ -319,14 +325,12 @@ def train_zo_rlvr(model, tokenizer, train_data, eval_data, args, device):
         # 学習が起きているかどうかはこちらで判断する。
         eval_reward = None
         if step % args.eval_interval == 0 or step == 1 or step == args.max_steps:
-            eval_reward = compute_reward(
+            eval_reward = evaluate_batch(
                 model,
                 tokenizer,
                 eval_questions,
                 eval_answers,
-                args.num_generations,
                 args.max_new_tokens,
-                device,
             )
             print(
                 f"{step:>5}  {r_plus:>7.3f}  {r_minus:>7.3f}  {grad_scale:>+12.4f}  "
@@ -389,6 +393,15 @@ def parse_args():
         "爆発するため lr と合わせて調整が必要。"
         "更新量の目安: lr * grad_clip * |u| ≈ lr * grad_clip",
     )
+    p.add_argument(
+        "--lora-rank",
+        type=int,
+        default=8,
+        help="ZO 摂動を LoRA 空間に制限するときのランク。"
+        "0 を指定すると全パラメータに摂動（従来の full モード）。"
+        "LoRA モードでは摂動次元が 2*rank*(in+out)*layers に削減され"
+        "次元の呪いが緩和される。推奨: 4, 8, 16, 64",
+    )
     p.add_argument("--batch-size", type=int, default=4)
     p.add_argument("--num-generations", type=int, default=8)
     p.add_argument("--max-new-tokens", type=int, default=512)
@@ -432,12 +445,24 @@ def main():
         torch_dtype=torch.bfloat16,
         trust_remote_code=True,
     ).to(device)
+
+    # LoRA モード: PEFT が base weight を freeze し LoRA パラメータのみ requires_grad=True にする。
+    # _zo_iter の requires_grad フィルタが自動的に LoRA 空間のみを摂動・更新する。
+    if args.lora_rank > 0:
+        from peft import get_peft_model, LoraConfig, TaskType
+        lora_config = LoraConfig(r=args.lora_rank, task_type=TaskType.CAUSAL_LM)
+        model = get_peft_model(model, lora_config)
+        model.print_trainable_parameters()
+        logger.info(f"ZO mode: LoRA (rank={args.lora_rank})")
+    else:
+        logger.info("ZO mode: full parameter perturbation")
+
     model.eval()  # ZO は forward のみ、backward 不要
 
     # データロード
     logger.info("loading GSM8K...")
     train_data = load_gsm8k(split="train")
-    eval_data = load_gsm8k(split="test")  # 追加：eval 用に test split を分離
+    eval_data = load_gsm8k(split="test")
     logger.info(f"train: {len(train_data)} samples  eval: {len(eval_data)} samples")
 
     if args.mode == "measure":
@@ -449,7 +474,6 @@ def main():
         logger.info(f"saved to {out / 'epsilon_results.json'}")
 
     else:
-        # train_data と eval_data を分けて渡す（追加）
         train_zo_rlvr(model, tokenizer, train_data, eval_data, args, device)
 
 
