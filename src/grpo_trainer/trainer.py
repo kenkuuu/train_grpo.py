@@ -125,7 +125,7 @@ class GRPOTrainerWrapper:
         if tc.max_steps > 0:
             total_steps = tc.max_steps
         else:
-            steps_per_epoch = len(train_dataset) // (
+            steps_per_epoch = (len(train_dataset) * tc.num_generations) // (
                 tc.per_device_train_batch_size * tc.gradient_accumulation_steps
             )
             total_steps = steps_per_epoch * tc.num_train_epochs
