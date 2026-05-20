@@ -295,7 +295,20 @@ def train_zo_rlvr(model, tokenizer, train_data, eval_data, args, device):
 
         # ZO 勾配推定 & SGD 更新（backprop なし）
         # RLVR では検証可能な報酬が直接得られるので link function 逆変換は不要
+        #
+        # 【grad_scale の爆発問題】
+        # バイナリ報酬では r+ - r- が最大 1.0 になるため、
+        # grad_scale = (r+ - r-) / 2ε は ε が小さいほど爆発する。
+        # 例: ε=1e-4, r+-r-=0.188 → grad_scale=937.5
+        # これをそのまま lr=1e-3 で使うと更新量 ≈ 0.94 * u となり
+        # ε=1e-4 の摂動幅の 9375 倍の更新が起きてモデルが崩壊する。
+        #
+        # 【対処】
+        # (1) grad_scale を [-grad_clip, grad_clip] にクリップ（デフォルト 1.0）
+        # (2) lr を ε と同スケールに下げる（目安: lr ≈ epsilon）
+        #     例: ε=1e-4 → lr=1e-4 で更新量 = lr * clip * u = 1e-4 * u
         grad_scale = (r_plus - r_minus) / (2 * args.epsilon)
+        grad_scale = float(np.clip(grad_scale, -args.grad_clip, args.grad_clip))
         zo_sgd_update(model, grad_scale, args.lr, zo_seed)
 
         train_reward = (r_plus + r_minus) / 2
@@ -367,7 +380,15 @@ def parse_args():
 
     # ZO ハイパーパラメータ
     p.add_argument("--epsilon", type=float, default=1e-2)
-    p.add_argument("--lr", type=float, default=1e-3)
+    p.add_argument("--lr", type=float, default=1e-4)
+    p.add_argument(
+        "--grad-clip",
+        type=float,
+        default=1.0,
+        help="grad_scale のクリップ幅。バイナリ報酬では grad_scale が "
+        "爆発するため lr と合わせて調整が必要。"
+        "更新量の目安: lr * grad_clip * |u| ≈ lr * grad_clip",
+    )
     p.add_argument("--batch-size", type=int, default=4)
     p.add_argument("--num-generations", type=int, default=8)
     p.add_argument("--max-new-tokens", type=int, default=512)
