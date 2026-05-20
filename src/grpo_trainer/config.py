@@ -97,6 +97,22 @@ class RewardConfig:
 
 
 @dataclass
+class MaskConfig:
+    """Sparse mask configuration for masked training."""
+    enabled: bool = False
+    # Path to the fine-tuned checkpoint used to compute the delta mask.
+    # Compared against base_path to determine which parameters were updated.
+    finetuned_path: str = ""
+    # Base model or checkpoint to compare against.
+    # Defaults to the model.name in ModelConfig when empty.
+    base_path: str = ""
+    # |delta| > threshold → parameter is "active" (receives gradients)
+    threshold: float = 1e-5
+    # invert=True → train only the sparse (inactive) region instead
+    invert: bool = False
+
+
+@dataclass
 class TrainingConfig:
     """Training configuration."""
     # Output
@@ -171,21 +187,23 @@ class Config:
     data: DataConfig = field(default_factory=DataConfig)
     reward: RewardConfig = field(default_factory=RewardConfig)
     training: TrainingConfig = field(default_factory=TrainingConfig)
-    
+    mask: MaskConfig = field(default_factory=MaskConfig)
+
     @classmethod
     def from_yaml(cls, path: str | Path) -> "Config":
         """Load configuration from YAML file."""
         with open(path) as f:
             raw_config = yaml.safe_load(f)
-        
+
         return cls(
             model=ModelConfig(**raw_config.get("model", {})),
             lora=LoRAConfig(**raw_config.get("lora", {})),
             data=DataConfig(**raw_config.get("data", {})),
             reward=RewardConfig(**raw_config.get("reward", {})),
             training=TrainingConfig(**raw_config.get("training", {})),
+            mask=MaskConfig(**raw_config.get("mask", {})),
         )
-    
+
     @classmethod
     def from_omega(cls, cfg: DictConfig) -> "Config":
         """Load configuration from OmegaConf DictConfig."""
@@ -195,8 +213,9 @@ class Config:
             data=DataConfig(**OmegaConf.to_container(cfg.get("data", {}))),
             reward=RewardConfig(**OmegaConf.to_container(cfg.get("reward", {}))),
             training=TrainingConfig(**OmegaConf.to_container(cfg.get("training", {}))),
+            mask=MaskConfig(**OmegaConf.to_container(cfg.get("mask", {}))),
         )
-    
+
     def to_yaml(self, path: str | Path) -> None:
         """Save configuration to YAML file."""
         config_dict = {
@@ -205,6 +224,7 @@ class Config:
             "data": self.data.__dict__,
             "reward": self.reward.__dict__,
             "training": self.training.__dict__,
+            "mask": self.mask.__dict__,
         }
         with open(path, "w") as f:
             yaml.dump(config_dict, f, default_flow_style=False, sort_keys=False)

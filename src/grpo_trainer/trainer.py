@@ -15,6 +15,7 @@ from grpo_trainer.config import Config
 from grpo_trainer.model import load_model_and_tokenizer, count_parameters
 from grpo_trainer.datasets import load_dataset_for_training, load_eval_dataset
 from grpo_trainer.rewards import RewardManager
+from grpo_trainer.mask import compute_delta_mask, get_sparsity_stats, MaskedGradCallback
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +104,26 @@ class GRPOTrainerWrapper:
         # Create training arguments
         training_args = self._create_training_args()
         
+        # Set up sparse mask if enabled
+        callbacks = [SaveAtStep1Callback()]
+        if self.config.mask.enabled:
+            mc = self.config.mask
+            base_path = mc.base_path or self.config.model.name
+            if not mc.finetuned_path:
+                raise ValueError("mask.finetuned_path must be set when mask.enabled=true")
+            logger.info(
+                f"Computing delta mask: base={base_path} finetuned={mc.finetuned_path} "
+                f"threshold={mc.threshold} invert={mc.invert}"
+            )
+            mask = compute_delta_mask(base_path, mc.finetuned_path, threshold=mc.threshold)
+            stats = get_sparsity_stats(mask)
+            logger.info(
+                f"Mask loaded — active: {stats.active_fraction:.4f}  "
+                f"sparse: {stats.global_sparsity:.4f}  "
+                f"({stats.active_params:,} / {stats.total_params:,} params)"
+            )
+            callbacks.append(MaskedGradCallback(self.model, mask, invert=mc.invert))
+
         # Initialize trainer
         logger.info("Initializing GRPOTrainer...")
         trainer_kwargs = {
@@ -111,7 +132,7 @@ class GRPOTrainerWrapper:
             "reward_funcs": reward_funcs,
             "args": training_args,
             "train_dataset": train_dataset,
-            "callbacks": [SaveAtStep1Callback()],
+            "callbacks": callbacks,
         }
 
         if eval_dataset:
@@ -121,7 +142,7 @@ class GRPOTrainerWrapper:
             trainer_kwargs["peft_config"] = self.peft_config
 
         self.trainer = GRPOTrainer(**trainer_kwargs)
-        
+
         logger.info("Setup complete!")
         return self
     

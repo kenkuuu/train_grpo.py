@@ -16,6 +16,7 @@ services:
     volumes:
       - ./outputs:/app/outputs
       - ./configs:/app/configs
+      - ./scripts:/app/scripts
       - ./data:/app/data
       - ~/.cache/huggingface:/root/.cache/huggingface
       - ./src:/app/src
@@ -41,6 +42,7 @@ services:
     volumes:
       - ./outputs:/app/outputs
       - ./configs:/app/configs
+      - ./scripts:/app/scripts
       - ./data:/app/data
       - ~/.cache/huggingface:/root/.cache/huggingface
       - ./src:/app/src
@@ -64,6 +66,7 @@ services:
     volumes:
       - ./outputs:/app/outputs
       - ./configs:/app/configs
+      - ./scripts:/app/scripts
       - ./data:/app/data
       - ~/.cache/huggingface:/root/.cache/huggingface
       - ./src:/app/src
