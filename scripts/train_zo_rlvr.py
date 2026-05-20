@@ -371,7 +371,21 @@ def train_zo_rlvr(model, tokenizer, train_data, eval_data, args, device):
 
 
 def parse_args():
+    # --config のみ先読みして YAML をデフォルト値として注入する。
+    # CLI 引数は YAML より優先される。
+    import yaml
+
+    pre = argparse.ArgumentParser(add_help=False)
+    pre.add_argument("--config", type=str, default=None)
+    pre_args, _ = pre.parse_known_args()
+
+    yaml_defaults = {}
+    if pre_args.config:
+        with open(pre_args.config) as f:
+            yaml_defaults = yaml.safe_load(f) or {}
+
     p = argparse.ArgumentParser(description="ZO-RLVR toy experiment")
+    p.add_argument("--config", type=str, default=None, help="YAML config ファイルのパス")
     p.add_argument(
         "--mode",
         choices=["train", "measure"],
@@ -421,6 +435,7 @@ def parse_args():
     p.add_argument("--epsilons", type=float, nargs="+", default=[1e-4, 1e-3, 1e-2, 1e-1])
     p.add_argument("--num-batches", type=int, default=10, help="epsilon 測定で使うバッチ数")
 
+    p.set_defaults(**yaml_defaults)
     return p.parse_args()
 
 

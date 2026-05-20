@@ -1,0 +1,35 @@
+# ZO-RLVR Configuration - LoRA mode
+# ===================================
+# ZO 摂動を PEFT LoRA 空間に制限する。次元の呪いを緩和し
+# 全パラメータ摂動より安定した学習が期待できる。
+#
+# Usage:
+#   python scripts/train_zo_rlvr.py --config configs/zo_rlvr_lora.yaml
+#   python scripts/train_zo_rlvr.py --config configs/zo_rlvr_lora.yaml --mode measure
+
+model: "Qwen/Qwen2.5-1.5B-Instruct"
+gpu: 0
+seed: 42
+
+# ZO ハイパーパラメータ
+# lr ≈ epsilon を目安に設定する（更新量 = lr * grad_clip * |u| ≈ lr * grad_clip）
+epsilon: 1.0e-2
+lr: 1.0e-2
+grad_clip: 1.0
+lora_rank: 8      # 0 にすると full モードになる
+
+# ロールアウト設定
+batch_size: 4
+num_generations: 8
+max_new_tokens: 512
+
+# 学習設定
+mode: train
+max_steps: 200
+output_dir: "outputs/zo-rlvr-lora-r8"
+eval_interval: 20
+eval_batch_size: 32
+
+# epsilon 測定設定（--mode measure 時に使用）
+epsilons: [1.0e-4, 1.0e-3, 1.0e-2, 1.0e-1]
+num_batches: 10
