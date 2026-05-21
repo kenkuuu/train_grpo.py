@@ -13,8 +13,8 @@ seed: 42
 
 # ZO ハイパーパラメータ
 # lr ≈ epsilon を目安に設定する（更新量 = lr * grad_clip * |u| ≈ lr * grad_clip）
-epsilon: 1.0e-2
-lr: 1.0e-2
+epsilon: 1.0e-3
+lr: 1.0e-3
 grad_clip: 1.0
 lora_rank: 8      # 0 にすると full モードになる
 
