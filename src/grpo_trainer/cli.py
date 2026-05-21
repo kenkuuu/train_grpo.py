@@ -126,6 +126,11 @@ def train(
         "--seed",
         help="Random seed",
     ),
+    finetuned_path: Optional[str] = typer.Option(
+        None,
+        "--finetuned-path",
+        help="Checkpoint path used to compute delta mask (enables masked training)",
+    ),
     verbose: bool = typer.Option(
         False,
         "--verbose", "-v",
@@ -168,6 +173,9 @@ def train(
         config.training.report_to = report_to
     if seed is not None:
         config.training.seed = seed
+    if finetuned_path:
+        config.mask.enabled = True
+        config.mask.finetuned_path = finetuned_path
 
     # Append seed to output_dir / run_name if not explicitly provided,
     # so each seed run is saved to a distinct directory.
